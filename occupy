@@ -1,0 +1,98 @@
+#!/bin/bash
+
+# occupy - GPU占用控制脚本的包装器
+# 使用方法: occupy on [options], occupy off, occupy status
+
+# 获取脚本所在目录
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PYTHON_SCRIPT="$SCRIPT_DIR/gpu_occupy.py"
+
+# 检查 Python 脚本是否存在
+if [ ! -f "$PYTHON_SCRIPT" ]; then
+    echo "Error: gpu_occupy.py not found at $PYTHON_SCRIPT"
+    exit 1
+fi
+
+# 检查 Python 和 PyTorch 是否可用
+check_requirements() {
+    if ! command -v python3 &> /dev/null; then
+        echo "Error: python3 is not installed or not in PATH"
+        exit 1
+    fi
+
+    if ! python3 -c "import torch" &> /dev/null; then
+        echo "Error: PyTorch is not installed"
+        echo "Please install PyTorch: pip install torch"
+        exit 1
+    fi
+}
+
+# 显示使用方法
+show_usage() {
+    echo "Usage: occupy <command> [options]"
+    echo ""
+    echo "Commands:"
+    echo "  on [options]    Start GPU occupation"
+    echo "  off             Stop GPU occupation"
+    echo "  status          Show occupation status"
+    echo ""
+    echo "Options for 'on' command:"
+    echo "  --gpus <list>           GPU indexes to use (default: 0)"
+    echo "  --memory <size>         Memory size to occupy in GB (default: 38)"
+    echo "  --sleep_min <minutes>   Sleep time between compute cycles (default: 5)"
+    echo "  --compute_min <minutes> Duration of each compute cycle (default: 30)"
+    echo "  --no_compute            Disable compute workload (default: compute enabled)"
+    echo ""
+    echo "Examples:"
+    echo "  occupy on                                                         # Use GPU 0, 38GB memory, WITH compute (30min/5min)"
+    echo "  occupy on --gpus 0 1 2 3                                          # Use multiple GPUs with default compute cycle"
+    echo "  occupy on --gpus 0 1 --memory 20                                  # Use GPU 0,1, 20GB each, with compute"
+    echo "  occupy on --gpus 0 1 --no_compute                                 # Use GPU 0,1, memory only (no compute)"
+    echo "  occupy on --gpus 0 1 --compute_min 20 --sleep_min 10              # Custom compute: 20min compute, 10min sleep"
+    echo "  occupy on --gpus 2 3 --memory 30 --compute_min 20 --sleep_min 10  # Full example: GPU 2,3, 30GB each, 20min/10min"
+    echo "  occupy off                                                        # Stop occupation"
+    echo "  occupy status                                                     # Show current status"
+}
+
+# 主逻辑
+main() {
+    # 检查参数
+    if [ $# -eq 0 ]; then
+        show_usage
+        exit 1
+    fi
+
+    local command="$1"
+    shift
+
+    case "$command" in
+        "on")
+            check_requirements
+            # 使用 nohup 在后台运行，避免终端关闭时进程结束
+            nohup python3 "$PYTHON_SCRIPT" on "$@" > /dev/null 2>&1 &
+            sleep 2
+            python3 "$PYTHON_SCRIPT" status
+            ;;
+        "off")
+            check_requirements
+            python3 "$PYTHON_SCRIPT" off
+            ;;
+        "status")
+            check_requirements
+            python3 "$PYTHON_SCRIPT" status
+            ;;
+        "-h"|"--help"|"help")
+            show_usage
+            ;;
+        *)
+            echo "Error: Unknown command '$command'"
+            echo ""
+            show_usage
+            exit 1
+            ;;
+    esac
+}
+
+# 运行主函数
+main "$@"
+

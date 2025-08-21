@@ -1,0 +1,3 @@
+#!/bin/bash
+source "/home/aiscuser/gpu/gpu-occupy-env/bin/activate"
+exec "/home/aiscuser/gpu/occupy" "$@"
