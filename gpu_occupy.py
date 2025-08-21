@@ -9,15 +9,45 @@ import signal
 import sys
 import subprocess
 from pathlib import Path
+import yaml
 
 # 配置文件和 PID 文件路径
+SCRIPT_DIR = Path(__file__).parent
 CONFIG_DIR = Path.home() / ".config" / "gpu_occupy"
 PID_FILE = CONFIG_DIR / "occupy.pid"
 LOG_FILE = CONFIG_DIR / "occupy.log"
+CONFIG_YAML = SCRIPT_DIR / "config.yaml"
 
 def setup_config_dir():
     """创建配置目录"""
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+
+def load_config_defaults():
+    """从YAML文件加载默认配置"""
+    default_config = {
+        'gpus': [0, 1, 2, 3],
+        'memory': 38.0,
+        'mem_threshold': 1.0,
+        'wait_minutes': 5.0,
+        'refresh_minutes': 1.0,
+        'compute_min': 30.0,
+        'sleep_min': 5.0,
+        'no_compute': False,
+        'log_level': 'INFO',
+        'max_retries': 3
+    }
+    
+    try:
+        if CONFIG_YAML.exists():
+            with open(CONFIG_YAML, 'r', encoding='utf-8') as f:
+                yaml_config = yaml.safe_load(f)
+                if yaml_config:
+                    default_config.update(yaml_config)
+                    logging.debug(f"Loaded configuration from {CONFIG_YAML}")
+    except Exception as e:
+        logging.warning(f"Failed to load config from {CONFIG_YAML}: {e}, using built-in defaults")
+    
+    return default_config
 
 def save_pid():
     """保存当前进程 PID"""
@@ -320,29 +350,32 @@ def status_occupy():
         cleanup_pid_file()  # 清理可能存在的旧 PID 文件
 
 def main():
+    # 加载配置默认值
+    config_defaults = load_config_defaults()
+    
     parser = argparse.ArgumentParser(description="GPU Memory and Utilization Occupancy Control Script")
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
 
     # on 命令
     on_parser = subparsers.add_parser('on', help='Start GPU occupation')
-    on_parser.add_argument("--gpus", nargs="+", type=int, default=[0,1,2,3],
-                          help="GPU indexes to use (default: 0)")
-    on_parser.add_argument("--memory", type=float, default=38,
-                          help="Memory size to occupy in GB (default: 38)")
-    on_parser.add_argument("--sleep_min", type=float, default=5,
-                          help="Sleep time between compute cycles in minutes (default: 5)")
-    on_parser.add_argument("--compute_min", type=float, default=30,
-                          help="Duration of each compute cycle in minutes (default: 30)")
-    on_parser.add_argument("--no_compute", action='store_true',
-                          help="Disable compute workload (default: compute enabled)")
-    on_parser.add_argument("--wait_minutes", type=float, default=5,
-                          help="Wait this many minutes after all GPUs have low memory before occupation starts (default: 5)")
-    on_parser.add_argument("--mem_threshold", type=float, default=1,
-                          help="Memory threshold in GB - occupy when all GPU used memory < threshold (default: 1)")
-    on_parser.add_argument("--refresh_minutes", type=float, default=1,
-                          help="Check interval in minutes for GPU memory status (default: 1)")
-    # 默认启用计算
-    on_parser.set_defaults(compute=True)
+    on_parser.add_argument("--gpus", nargs="+", type=int, default=config_defaults['gpus'],
+                          help=f"GPU indexes to use (default: {config_defaults['gpus']})")
+    on_parser.add_argument("--memory", type=float, default=config_defaults['memory'],
+                          help=f"Memory size to occupy in GB (default: {config_defaults['memory']})")
+    on_parser.add_argument("--sleep_min", type=float, default=config_defaults['sleep_min'],
+                          help=f"Sleep time between compute cycles in minutes (default: {config_defaults['sleep_min']})")
+    on_parser.add_argument("--compute_min", type=float, default=config_defaults['compute_min'],
+                          help=f"Duration of each compute cycle in minutes (default: {config_defaults['compute_min']})")
+    on_parser.add_argument("--no_compute", action='store_true', default=config_defaults['no_compute'],
+                          help=f"Disable compute workload (default: {config_defaults['no_compute']})")
+    on_parser.add_argument("--wait_minutes", type=float, default=config_defaults['wait_minutes'],
+                          help=f"Wait this many minutes after all GPUs have low memory before occupation starts (default: {config_defaults['wait_minutes']})")
+    on_parser.add_argument("--mem_threshold", type=float, default=config_defaults['mem_threshold'],
+                          help=f"Memory threshold in GB - occupy when all GPU used memory < threshold (default: {config_defaults['mem_threshold']})")
+    on_parser.add_argument("--refresh_minutes", type=float, default=config_defaults['refresh_minutes'],
+                          help=f"Check interval in minutes for GPU memory status (default: {config_defaults['refresh_minutes']})")
+    # 设置计算默认值
+    on_parser.set_defaults(compute=not config_defaults['no_compute'])
 
     # off 命令
     subparsers.add_parser('off', help='Stop GPU occupation')

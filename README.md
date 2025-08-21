@@ -18,7 +18,7 @@ An intelligent GPU memory and compute occupation tool that automatically starts 
 ```bash
 git clone git@github.com:X1AOX1A/silicon-shepherd.git
 cd silicon-shepherd
-bash install.sh
+bash install.sh  # Automatically installs dependencies and creates virtual environment
 ```
 
 ### Quick Usage
@@ -32,6 +32,54 @@ occupy status
 
 # Stop occupation
 occupy off
+```
+
+## Configuration
+
+Silicon Shepherd uses a YAML configuration file (`config.yaml`) to set default values. You can customize these defaults by editing the configuration file in the project directory.
+
+### Configuration File Location
+- `config.yaml` - Main configuration file in the project directory
+- Default values are loaded from this file when the tool starts
+
+### Customizing Defaults
+
+Edit `config.yaml` to change default behavior:
+
+```yaml
+# GPU Configuration
+gpus: [0, 1, 2, 3]          # Default GPU indices
+memory: 38.0                # Default memory per GPU (GB)
+
+# Threshold and Timing
+mem_threshold: 1.0          # Memory threshold (GB)
+wait_minutes: 5.0           # Wait time after threshold met (minutes)
+refresh_minutes: 1.0        # Check interval (minutes)
+
+# Compute Configuration
+compute_min: 30.0           # Compute cycle duration (minutes)  
+sleep_min: 5.0              # Sleep between cycles (minutes)
+no_compute: false           # Disable compute by default
+```
+
+### Configuration Priority
+
+Settings are applied in this order (highest to lowest priority):
+1. **Command line arguments** - Override everything
+2. **YAML configuration file** - Custom defaults
+3. **Built-in defaults** - Fallback values
+
+### Example: Custom Default Configuration
+
+```bash
+# Edit config.yaml to change defaults
+vim config.yaml
+
+# Now 'occupy on' uses your custom defaults
+occupy on  # Uses settings from config.yaml
+
+# Command line args still override config file
+occupy on --memory 20  # Override memory setting
 ```
 
 ## Commands
@@ -270,7 +318,9 @@ tail -f ~/.config/gpu_occupy/occupy.log
 Silicon Shepherd consists of:
 - **occupy**: Bash wrapper script for easy command-line usage
 - **gpu_occupy.py**: Core Python implementation with PyTorch
-- **install.sh**: System-wide installation script
+- **config.yaml**: YAML configuration file for customizable defaults
+- **install.sh**: Installation script that creates virtual environment
+- **occupy_env**: Generated wrapper script with virtual environment (created by install.sh)
 
 The tool intelligently waits for GPUs to become available before occupying them, making it ideal for shared computing environments where you want to utilize idle resources without interfering with active workloads.
 
