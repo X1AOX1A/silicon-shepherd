@@ -35,6 +35,7 @@ uv venv gpu-occupy-env
 
 # Install PyTorch
 print_info "Installing PyTorch..."
+uv pip install --python gpu-occupy-env/bin/python PyYAML
 uv pip install --python gpu-occupy-env/bin/python numpy
 uv pip install --python gpu-occupy-env/bin/python torch
 
@@ -62,9 +63,9 @@ if ./occupy_env --help > /dev/null 2>&1; then
     print_success "Installation complete!"
     echo
     echo "Usage:"
-    echo "  ./occupy_env on     # Start GPU occupation"
-    echo "  ./occupy_env off    # Stop GPU occupation"
-    echo "  ./occupy_env status # Check status"
+    echo "  occupy on     # Start GPU occupation"
+    echo "  occupy off    # Stop GPU occupation"
+    echo "  occupy status # Check status"
 else
     print_error "Installation test failed"
     exit 1

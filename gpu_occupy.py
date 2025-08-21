@@ -163,19 +163,31 @@ def occupy_gpu_memory(gpu_indexes, memory_size, sleep_min, compute_min, compute=
     # 保存 PID（提前保存，以便在等待阶段也能被 stop 命令终止）
     save_pid()
 
-    # 设置日志
+    # 设置日志 - 确保日志文件目录存在
+    setup_config_dir()
+    
+    # 清除之前的日志配置
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
+    
+    # 设置新的日志配置（只写入文件，避免后台进程的输出问题）
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(levelname)s - %(message)s',
         handlers=[
-            logging.FileHandler(LOG_FILE),
-            logging.StreamHandler()
-        ]
+            logging.FileHandler(LOG_FILE, mode='w')  # 使用 'w' 模式覆盖之前的日志
+        ],
+        force=True  # 强制重新配置
     )
 
     # 设置信号处理器
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
+
+    # 测试日志是否工作
+    logging.info("=== GPU Occupation Process Started ===")
+    logging.info(f"Process PID: {os.getpid()}")
+    logging.info(f"Log file: {LOG_FILE}")
 
     # 记录初始信息
     logging.info(f"GPU indexes: {gpu_indexes}")
@@ -275,11 +287,6 @@ def start_occupy(args):
 
     setup_config_dir()
     
-    # 清空之前的日志文件
-    if LOG_FILE.exists():
-        LOG_FILE.unlink()
-        print(f"🧹 Cleared previous log file")
-
     # 处理计算参数
     compute = not args.no_compute
 
@@ -343,8 +350,14 @@ def status_occupy():
                         elif any('occupation started' in line.lower() for line in recent_lines):
                             print("\n🔥 [Status: Currently occupying GPU memory and compute]")
                             print("💡 Use 'occupy off' to stop occupation and exit")
+                    else:
+                        print("\n📝 Log file exists but is empty")
+                        print("💡 Process may be initializing or encountered an error")
             except Exception as e:
-                print(f"Error reading log file: {e}")
+                print(f"❌ Error reading log file: {e}")
+        else:
+            print("\n📝 No log file found")
+            print("💡 Process may not have started logging yet")
     else:
         print("⭕ Occupy is not running")
         cleanup_pid_file()  # 清理可能存在的旧 PID 文件
