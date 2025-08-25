@@ -19,6 +19,7 @@ An intelligent GPU memory and compute occupation tool that automatically starts 
 git clone git@github.com:X1AOX1A/silicon-shepherd.git
 cd silicon-shepherd
 bash install.sh  # Automatically installs dependencies and creates virtual environment
+alias occupy= ~/.local/bin/occupy
 ```
 
 ### Quick Usage
