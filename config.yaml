@@ -3,7 +3,8 @@
 # You can modify these values to customize the default behavior
 
 # GPU Configuration
-gpus: [0, 1, 2, 3]          # List of GPU indices to use by default
+# gpus: [0, 1, 2, 3]          # List of GPU indices to use by default
+gpus: [3]          # List of GPU indices to use by default
 memory: 38.0                # Memory size to occupy per GPU in GB
 
 # Threshold and Timing Configuration  
@@ -13,7 +14,7 @@ refresh_minutes: 1.0        # GPU status check interval (minutes)
 
 # Compute Configuration
 compute_min: 30.0           # Duration of each compute cycle (minutes)
-sleep_min: 5.0              # Sleep time between compute cycles (minutes)
+sleep_min: 30.0              # Sleep time between compute cycles (minutes)
 no_compute: false           # Set to true to disable compute workload by default
 
 # Advanced Configuration
